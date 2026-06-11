@@ -1,12 +1,12 @@
-# ### APP INFO
-app-name = JARVIS
+# APP INFO
+app-name = FTPDev Assistant
 app-description = Voice Assistant
 
-# ### TRAY MENU
+# TRAY MENU
 tray-restart = Restart
 tray-settings = Settings
 tray-exit = Exit
-tray-tooltip = JARVIS - Voice Assistant
+tray-tooltip = FTPDev Voice Assistant
 tray-language = Language
 tray-voice = Voice
 tray-wake-word = Wake Word Engine
@@ -14,26 +14,26 @@ tray-noise-suppression = Noise Suppression
 tray-vad = Voice Activity Detection
 tray-gain-normalizer = Gain Normalizer
 
-# ### HEADER
+# HEADER
 header-commands = COMMANDS
 header-settings = SETTINGS
 
-# ### SEARCH
-search-placeholder = Enter a command manually or say «Jarvis» ...
+# SEARCH
+search-placeholder = Enter a command manually or say «FTP» ...
 
-# ### MAIN PAGE
+# MAIN PAGE
 assistant-not-running = ASSISTANT NOT RUNNING
 assistant-offline-hint = You can configure it without starting.
 btn-start = START
 btn-starting = STARTING...
 
-# ### STATUS
+# STATUS
 status-disconnected = Disconnected
 status-standby = Standby
 status-listening = Listening...
 status-processing = Processing...
 
-# ### STATS
+# STATS
 stats-microphone = MICROPHONE
 stats-neural-networks = NEURAL NETWORKS
 stats-resources = RESOURCES
@@ -41,13 +41,13 @@ stats-system-default = System Default
 stats-not-selected = Not selected
 stats-loading = Loading...
 
-# ### FOOTER
-footer-author = Project author
-footer-telegram = Our Telegram channel
+# FOOTER
+footer-author = FTPDev
+footer-telegram = GitHub repository
 footer-github = Github repository
-footer-support = Support the project on
+footer-support = Support the project
 
-# ### SETTINGS
+# SETTINGS
 settings-title = Settings
 settings-general = General
 settings-devices = Devices
@@ -85,7 +85,7 @@ settings-disabled = Disabled
 settings-beta-title = BETA version!
 settings-beta-desc = Some features may not work correctly.
 settings-beta-feedback = Report all bugs to
-settings-beta-bot = our Telegram bot
+settings-beta-bot = GitHub Issues
 settings-open-logs = Open logs folder
 
 # settings - picovoice
@@ -108,21 +108,21 @@ settings-models-hint = Place Vosk models in resources/vosk folder
 settings-openai-key = OpenAI Key
 settings-openai-not-supported = ChatGPT is not currently supported. It will be added in future updates.
 
-# ### COMMANDS PAGE
+# COMMANDS PAGE
 commands-title = Commands
 commands-search = Search commands...
 commands-count = { $count } commands
 commands-wip-title = [404] This section is under development!
 commands-wip-desc = Here will be a list of commands + full-featured command editor.
 commands-wip-follow = Follow updates in
-commands-wip-channel = our Telegram channel
+commands-wip-channel = GitHub repository
 
-# ### ERRORS
+# ERRORS
 error-generic = An error occurred
 error-connection = Connection error
 error-not-found = Not found
 
-# ### NOTIFICATIONS
+# NOTIFICATIONS
 notification-saved = Settings saved!
 notification-error = Error
 notification-assistant-started = Assistant started
