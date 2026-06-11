@@ -8,6 +8,7 @@ use seqdiff::ratio;
 
 mod structs;
 pub use structs::*;
+pub use structs::CommandType;
 
 use crate::{config, i18n, APP_DIR};
 
