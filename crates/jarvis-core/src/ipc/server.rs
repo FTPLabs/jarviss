@@ -76,7 +76,7 @@ fn handle_action(action: IpcAction) {
 
 // Start the WebSocket server (blocking)
 pub async fn start_server() {
-    let addr = format!("{}:{}", IPC_ADDR, IPC_PORT);
+    let addr = format!("{}:{}", IPC_ADDR, ipc_port());
     let socket_addr: SocketAddr = addr.parse().expect("Invalid IPC address");
 
     let listener = match TcpListener::bind(&socket_addr).await {
