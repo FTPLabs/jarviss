@@ -19,18 +19,19 @@ const RECONNECT_DELAY = 5000
 
 let ws: WebSocket | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-let manualDisconnect = false
+let manualDisconnect = false  // true = user-initiated disconnect, skip auto-reconnect
 let enabled = false  // only connect when enabled
 
 export function enableIpc() {
-    enabled = true
-    connectIpc()
-}
+      enabled = true
+      manualDisconnect = false
+      connectIpc()
+  }
 
 export function disableIpc() {
-    enabled = false
-    disconnectIpc()
-}
+      enabled = false
+      disconnectIpc()
+  }
 
 export function connectIpc(port: number = 9712) {
     if (ws?.readyState === WebSocket.OPEN) return
@@ -44,9 +45,14 @@ export function connectIpc(port: number = 9712) {
     }
 
     ws.onclose = () => {
-        ipcConnected.set(false)
-        console.log("[IPC] disconnected")
-    }
+          ipcConnected.set(false)
+          jarvisState.set("disconnected")
+          console.log("[IPC] disconnected")
+          // auto-reconnect only if enabled and not manually disconnected
+          if (enabled && !manualDisconnect) {
+              reconnectTimer = setTimeout(() => connectIpc(), RECONNECT_DELAY)
+          }
+      }
 
     ws.onerror = (err) => {
         console.error("[IPC] error:", err)
@@ -73,12 +79,12 @@ function scheduleReconnect() {
 }
 
 export function disconnectIpc() {
-    manualDisconnect = true
-
-    if (reconnectTimer) {
-        clearTimeout(reconnectTimer)
-        reconnectTimer = null
-    }
+      manualDisconnect = true
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
+      if (ws) { ws.close(); ws = null }
+      ipcConnected.set(false)
+      jarvisState.set("disconnected")
+  }
 
     if (ws) {
         ws.close()
