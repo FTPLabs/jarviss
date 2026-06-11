@@ -1,123 +1,142 @@
 name: Build JARVIS for Windows
 
-on:
-  push:
-    branches: [ master, main ]
-    tags:
-      - 'v*'
-  pull_request:
-    branches: [ master, main ]
-  workflow_dispatch:
+  on:
+    push:
+      branches: [ master, main ]
+      tags:
+        - 'v*'
+    pull_request:
+      branches: [ master, main ]
+    workflow_dispatch:
 
-permissions:
-  contents: write
+  permissions:
+    contents: write
 
-jobs:
-  build-windows:
-    name: Build Windows .exe
-    runs-on: windows-latest
+  jobs:
+    build-windows:
+      name: Build Windows .exe
+      runs-on: windows-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
+        - name: Install Rust toolchain
+          uses: dtolnay/rust-toolchain@stable
+          with:
+            targets: x86_64-pc-windows-msvc
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ". -> target"
+        - name: Cache Rust dependencies
+          uses: Swatinem/rust-cache@v2
+          with:
+            workspaces: ". -> target"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+        - name: Setup Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '20'
+            cache: 'npm'
+            cache-dependency-path: frontend/package-lock.json
 
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
+        - name: Install frontend dependencies
+          working-directory: frontend
+          run: npm ci
 
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          npx vite build --mode development --emptyOutDir false || true
-          npx vite build
+        - name: Build frontend
+          working-directory: frontend
+          run: |
+            npx vite build --mode development --emptyOutDir false || true
+            npx vite build
 
-      - name: Disable beforeBuildCommand in tauri.conf.json
-        shell: node {0}
-        run: |
-          const fs = require('fs');
-          const p = 'crates/jarvis-gui/tauri.conf.json';
-          const cfg = JSON.parse(fs.readFileSync(p, 'utf8'));
-          cfg.build.beforeBuildCommand = '';
-          cfg.build.beforeDevCommand = '';
-          fs.writeFileSync(p, JSON.stringify(cfg, null, 2));
-          console.log('tauri.conf.json patched');
+        # BUG FIX: Build jarvis-app (backend voice process) BEFORE Tauri so it
+        # exists at target/release/jarvis-app.exe when Tauri bundles resources.
+        # Without this step the bundle does not include jarvis-app.exe and the
+        # GUI shows "Файл jarvis-app.exe не найден" on every launch.
+        - name: Build jarvis-app (voice assistant backend)
+          run: cargo build --release -p jarvis-app
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2" --locked
+        - name: Disable beforeBuildCommand in tauri.conf.json
+          shell: node {0}
+          run: |
+            const fs = require('fs');
+            const p = 'crates/jarvis-gui/tauri.conf.json';
+            const cfg = JSON.parse(fs.readFileSync(p, 'utf8'));
+            cfg.build.beforeBuildCommand = '';
+            cfg.build.beforeDevCommand = '';
+            fs.writeFileSync(p, JSON.stringify(cfg, null, 2));
+            console.log('tauri.conf.json patched');
 
-      - name: Build Tauri app (Windows)
-        working-directory: crates/jarvis-gui
-        run: cargo tauri build
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        - name: Install Tauri CLI
+          run: cargo install tauri-cli --version "^2" --locked
 
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: jarvis-windows-installer
-          path: |
-            target/release/bundle/nsis/*.exe
-            target/release/bundle/msi/*.msi
-          if-no-files-found: warn
-          retention-days: 30
+        - name: Build Tauri app (Windows)
+          working-directory: crates/jarvis-gui
+          run: cargo tauri build
+          env:
+            TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+            TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-      - name: Upload portable .exe
-        uses: actions/upload-artifact@v4
-        with:
-          name: jarvis-windows-portable
-          path: target/release/jarvis-gui.exe
-          if-no-files-found: warn
-          retention-days: 30
+        - name: Upload installer
+          uses: actions/upload-artifact@v4
+          with:
+            name: jarvis-windows-installer
+            path: |
+              target/release/bundle/nsis/*.exe
+              target/release/bundle/msi/*.msi
+            if-no-files-found: warn
+            retention-days: 30
 
-  release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: build-windows
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
+        - name: Upload portable .exe
+          uses: actions/upload-artifact@v4
+          with:
+            name: jarvis-windows-portable
+            path: target/release/jarvis-gui.exe
+            if-no-files-found: warn
+            retention-days: 30
 
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
+        # Upload jarvis-app.exe as a separate portable artifact
+        - name: Upload jarvis-app portable
+          uses: actions/upload-artifact@v4
+          with:
+            name: jarvis-app-portable
+            path: target/release/jarvis-app.exe
+            if-no-files-found: warn
+            retention-days: 30
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: JARVIS ${{ github.ref_name }}
-          body: |
-            ## JARVIS ${{ github.ref_name }}
-            (c) 2026 FTPDev | Telegram: @ftpdev_sup
+    release:
+      name: Create GitHub Release
+      runs-on: ubuntu-latest
+      needs: build-windows
+      if: startsWith(github.ref, 'refs/tags/v')
+      permissions:
+        contents: write
 
-            ### Установка
-            Скачайте установщик (.exe или .msi) и запустите его.
+      steps:
+        - name: Download artifacts
+          uses: actions/download-artifact@v4
+          with:
+            path: dist
 
-            ### Portable
-            Скачайте portable .exe для запуска без установки.
-          files: |
-            dist/**/*.exe
-            dist/**/*.msi
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        - name: Create Release
+          uses: softprops/action-gh-release@v2
+          with:
+            name: JARVIS ${{ github.ref_name }}
+            body: |
+              ## JARVIS ${{ github.ref_name }}
+              (c) 2026 FTPDev | Telegram: @ftpdev_sup
+
+              ### Установка
+              Скачайте установщик (.exe или .msi) и запустите его.
+
+              ### Portable
+              Скачайте **оба** файла в одну папку для запуска без установки:
+              - `jarvis-gui.exe` — интерфейс
+              - `jarvis-app.exe` — голосовой ассистент (backend)
+            files: |
+              dist/**/*.exe
+              dist/**/*.msi
+            draft: false
+            prerelease: false
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  

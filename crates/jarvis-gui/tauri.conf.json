@@ -39,7 +39,8 @@
       "../../resources/sound": "resources/sound",
       "../../resources/rustpotter": "resources/rustpotter",
       "../../resources/vosk": "resources/vosk",
-      "../../resources/keywords": "resources/keywords"
+      "../../resources/keywords": "resources/keywords",
+      "../../target/release/jarvis-app.exe": "jarvis-app.exe"
     }
   }
 }
