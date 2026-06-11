@@ -1,12 +1,12 @@
 # APP INFO
-app-name = JARVIS
+app-name = FTPDev Assistant
 app-description = Голосовой ассистент
 
 # TRAY MENU
 tray-restart = Перезапустить
 tray-settings = Настройки
 tray-exit = Выход
-tray-tooltip = JARVIS - Голосовой ассистент
+tray-tooltip = FTPDev Voice Assistant
 tray-language = Язык
 tray-voice = Голос
 tray-wake-word = Движок wake-word
@@ -19,7 +19,7 @@ header-commands = КОМАНДЫ
 header-settings = НАСТРОЙКИ
 
 # SEARCH
-search-placeholder = Введите команду вручную или произнесите «Джарвис» ...
+search-placeholder = Введите команду вручную или произнесите «ФТП» ...
 
 # MAIN PAGE
 assistant-not-running = АССИСТЕНТ НЕ ЗАПУЩЕН
@@ -42,10 +42,10 @@ stats-not-selected = Не выбран
 stats-loading = Загрузка...
 
 # FOOTER
-footer-author = Автор проекта
-footer-telegram = Наш телеграм канал
+footer-author = FTPDev
+footer-telegram = GitHub репозиторий
 footer-github = Github репозиторий проекта
-footer-support = Поддержать проект на
+footer-support = Поддержать проект
 
 # SETTINGS
 settings-title = Настройки
@@ -85,7 +85,7 @@ settings-disabled = Отключено
 settings-beta-title = БЕТА версия!
 settings-beta-desc = Часть функций может работать некорректно.
 settings-beta-feedback = Сообщайте обо всех найденных багах в
-settings-beta-bot = наш телеграм бот
+settings-beta-bot = GitHub Issues
 settings-open-logs = Открыть папку с логами
 
 # settings - picovoice
@@ -115,7 +115,7 @@ commands-count = { $count } команд
 commands-wip-title = [404] Этот раздел еще находится в разработке!
 commands-wip-desc = Тут будет список команд + полноценный редактор команд.
 commands-wip-follow = Следите за обновлениями в
-commands-wip-channel = нашем телеграм канале
+commands-wip-channel = GitHub репозитории
 
 # ERRORS
 error-generic = Произошла ошибка
