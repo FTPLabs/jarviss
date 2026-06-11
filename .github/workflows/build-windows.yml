@@ -39,9 +39,13 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build frontend
+      - name: Generate Routify routes
         working-directory: frontend
-        run: npm run build
+        run: npx vite build --mode development --emptyOutDir false || true
+
+      - name: Build frontend (production)
+        working-directory: frontend
+        run: npx vite build
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
