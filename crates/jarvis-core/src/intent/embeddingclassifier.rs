@@ -90,7 +90,7 @@ fn build_intent_vectors(
                 continue;
             }
 
-            let texts: Vec<&str> = phrases.iter().map(|s| s.as_str()).collect();
+            let texts: Vec<&str> = phrases.iter().copied().collect();
             
             let embeddings = model.embedding.lock().embed(texts, None)
                 .map_err(|e| format!("Embedding failed for '{}': {}", cmd.id, e))?;
