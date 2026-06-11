@@ -51,6 +51,16 @@ name: Build JARVIS for Windows
         - name: Build jarvis-app backend
           run: cargo build --release -p jarvis-app
 
+        - name: Verify jarvis-app.exe was built
+          run: |
+            if (!(Test-Path "target/release/jarvis-app.exe")) {
+              Write-Error "jarvis-app.exe was not built! Check cargo build step."
+              exit 1
+            }
+            Write-Host "jarvis-app.exe found at: $(Resolve-Path target/release/jarvis-app.exe)"
+            Write-Host "Size: $((Get-Item target/release/jarvis-app.exe).length / 1MB) MB"
+          shell: pwsh
+
         - name: Disable beforeBuildCommand in tauri.conf.json
           shell: node {0}
           run: |
