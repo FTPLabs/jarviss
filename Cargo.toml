@@ -9,9 +9,9 @@ resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
-authors = ["Abraham Tugalov"]
+authors = ["FTPDev"]
 license = "GPL-3.0-only"
-repository = "https://github.com/Priler/jarvis"
+repository = "https://github.com/FTPLabs/jarviss"
 edition = "2021"
 
 [workspace.dependencies]
@@ -52,4 +52,3 @@ ndarray = "0.17"
 tokenizers = { version = "0.22", default-features = false }
 regex = "1"
 sys-locale = "0.3"
-
