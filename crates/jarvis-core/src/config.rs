@@ -78,9 +78,9 @@ pub const VOICES_PATH: &str = "voices";
 
 // Идентификаторы бренда FTPDev
 pub const APP_NAME: &str = "JARVIS";
-  pub const APP_COPYRIGHT: &str = "© 2026 FTPDev";
-  pub const APP_TELEGRAM: &str = "@ftpdev_sup";
-  pub const BUNDLE_IDENTIFIER: &str = "com.ftpdev.jarvis";
+pub const APP_COPYRIGHT: &str = "© 2026 FTPDev";
+pub const APP_TELEGRAM: &str = "@ftpdev_sup";
+pub const BUNDLE_IDENTIFIER: &str = "com.ftpdev.jarvis";
 pub const DB_FILE_NAME: &str = "app.db";
 pub const LOG_FILE_NAME: &str = "log.txt";
 pub const APP_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
