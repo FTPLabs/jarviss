@@ -10,7 +10,7 @@ static BACKEND: OnceCell<NoiseSuppressionBackend> = OnceCell::new();
 #[cfg(feature = "nnnoiseless")]
 static NNNOISELESS_STATE: OnceCell<Mutex<crate::models::nnnoiseless::NnnoiselessNS>> = OnceCell::new();
 
-pub fn init(mut backend: NoiseSuppressionBackend) {
+pub fn init(backend: NoiseSuppressionBackend) {
     if BACKEND.get().is_some() {
         return;
     }
