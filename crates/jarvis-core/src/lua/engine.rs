@@ -85,7 +85,7 @@ use mlua::{Lua, Value, StdLib};
           // install timeout hook
           let start = std::time::Instant::now();
           let timeout_marker = TIMEOUT_MARKER.to_string();
-          self.lua.set_hook(mlua::HookTriggers::every_nth_instruction(1000), move |_, _| {
+          self.lua.set_hook(mlua::HookTriggers { every_nth_instruction: Some(1000), ..Default::default() }, move |_, _| {
               if start.elapsed() >= timeout {
                   Err(mlua::Error::runtime(timeout_marker.clone()))
               } else {
