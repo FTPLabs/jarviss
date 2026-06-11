@@ -23,15 +23,15 @@ let manualDisconnect = false  // true = user-initiated disconnect, skip auto-rec
 let enabled = false  // only connect when enabled
 
 export function enableIpc() {
-      enabled = true
-      manualDisconnect = false
-      connectIpc()
-  }
+    enabled = true
+    manualDisconnect = false
+    connectIpc()
+}
 
 export function disableIpc() {
-      enabled = false
-      disconnectIpc()
-  }
+    enabled = false
+    disconnectIpc()
+}
 
 export function connectIpc(port: number = 9712) {
     if (ws?.readyState === WebSocket.OPEN) return
@@ -45,14 +45,14 @@ export function connectIpc(port: number = 9712) {
     }
 
     ws.onclose = () => {
-          ipcConnected.set(false)
-          jarvisState.set("disconnected")
-          console.log("[IPC] disconnected")
-          // auto-reconnect only if enabled and not manually disconnected
-          if (enabled && !manualDisconnect) {
-              reconnectTimer = setTimeout(() => connectIpc(), RECONNECT_DELAY)
-          }
-      }
+        ipcConnected.set(false)
+        jarvisState.set("disconnected")
+        console.log("[IPC] disconnected")
+        // auto-reconnect only if enabled and not manually disconnected
+        if (enabled && !manualDisconnect) {
+            scheduleReconnect()
+        }
+    }
 
     ws.onerror = (err) => {
         console.error("[IPC] error:", err)
@@ -79,18 +79,9 @@ function scheduleReconnect() {
 }
 
 export function disconnectIpc() {
-      manualDisconnect = true
-      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
-      if (ws) { ws.close(); ws = null }
-      ipcConnected.set(false)
-      jarvisState.set("disconnected")
-  }
-
-    if (ws) {
-        ws.close()
-        ws = null
-    }
-
+    manualDisconnect = true
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
+    if (ws) { ws.close(); ws = null }
     ipcConnected.set(false)
     jarvisState.set("disconnected")
 }
@@ -136,7 +127,6 @@ function handleEvent(data: any) {
             break
 
         case "reveal_window":
-            // bring window to foreground
             revealWindow()
             break
     }
@@ -148,7 +138,6 @@ export function sendAction(action: string, payload: Record<string, any> = {}) {
     if (ws?.readyState !== WebSocket.OPEN) {
         return false
     }
-
     ws.send(JSON.stringify({ action, ...payload }))
     return true
 }
@@ -167,7 +156,6 @@ export function sendIpcMessage(message: object): Promise<void> {
             reject(new Error("IPC not connected"))
             return
         }
-
         try {
             ws.send(JSON.stringify(message))
             resolve()
