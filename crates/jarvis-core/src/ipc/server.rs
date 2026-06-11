@@ -10,8 +10,19 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 
 use super::events::{IpcAction, IpcEvent};
 
-pub const IPC_PORT: u16 = 9712;
+pub const IPC_PORT_DEFAULT: u16 = 9712;
 pub const IPC_ADDR: &str = "127.0.0.1";
+
+/// Effective port — respects JARVIS_IPC_PORT env var for testing / multi-instance.
+pub fn ipc_port() -> u16 {
+    std::env::var("JARVIS_IPC_PORT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(IPC_PORT_DEFAULT)
+}
+
+/// Legacy alias so existing callers compile without changes.
+pub const IPC_PORT: u16 = IPC_PORT_DEFAULT;
 
 static BROADCAST_TX: OnceCell<broadcast::Sender<IpcEvent>> = OnceCell::new();
 static ACTION_HANDLER: OnceCell<Arc<RwLock<Option<Box<dyn Fn(IpcAction) + Send + Sync>>>>> = OnceCell::new();
