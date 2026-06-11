@@ -12,7 +12,7 @@ use mlua::{Lua, Table, Result as LuaResult};
               match key.as_str() {
                   "language"      => Some(s.language.clone()),
                   "voice"         => Some(s.voice.clone()),
-                  "microphone"    => Some(s.microphone_index.to_string()),
+                  "microphone"    => Some(s.microphone.to_string()),
                   _               => None,
               }
           });
