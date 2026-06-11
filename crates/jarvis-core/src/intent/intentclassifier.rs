@@ -77,7 +77,7 @@ async fn train_classifier(
             
             for phrase in phrases.iter() {
                 let example = TrainingExample {
-                    text: phrase.clone(),
+                    text: phrase.to_string(),
                     intent: IntentId::from(cmd.id.as_str()),
                     confidence: 1.0,
                     source: TrainingSource::Programmatic,
