@@ -195,20 +195,26 @@ pub fn execute_cli(cmd: &str, args: &[String]) -> std::io::Result<Child> {
 
 pub fn execute_command(cmd_path: &PathBuf, cmd_config: &JCommand, phrase: Option<&str>, slots: Option<&HashMap<String, SlotValue>>) -> Result<bool, String> {
     // execute command by the type
-    match cmd_config.cmd_type.as_str() {
+    use crate::commands::structs::CommandType;
+    match &cmd_config.cmd_type {
 
-        // BRUH
-        "voice" => Ok(true),
+        // voice command — handled by recognizer, not executed here
+        CommandType::Voice => Ok(true),
         
         // LUA command
         #[cfg(feature = "lua")]
-        "lua" => {
+        CommandType::Lua => {
             execute_lua_command(cmd_path, cmd_config, phrase, slots)
         }
 
         // AutoHotkey command
-        // @TODO: Consider adding ahk source files execution?
-        "ahk" => {
+        #[cfg(not(feature = "lua"))]
+        CommandType::Lua => {
+            Err("Lua support not compiled in".into())
+        }
+
+        // AutoHotkey command
+        CommandType::Ahk => {
             let exe_path_absolute = Path::new(&cmd_config.exe_path);
             let exe_path_local = cmd_path.join(&cmd_config.exe_path);
 
@@ -223,28 +229,21 @@ pub fn execute_command(cmd_path: &PathBuf, cmd_config: &JCommand, phrase: Option
                 .map_err(|e| format!("AHK process spawn error: {}", e))
         }
         
-        // CLI command type
-        // @TODO: Consider security restrictions
-        "cli" => {
+        // CLI command
+        CommandType::Cli => {
             execute_cli(&cmd_config.cli_cmd, &cmd_config.cli_args)
                 .map(|_| true)
                 .map_err(|e| format!("CLI command error: {}", e))
         }
         
-        // TERMINATOR command (T1000)
-        "terminate" => {
+        // Terminate process
+        CommandType::Terminate => {
             std::thread::sleep(Duration::from_secs(2));
             std::process::exit(0);
         }
         
-        // STOP CHANING
-        "stop_chaining" => Ok(false),
-
-        // other
-        _ => {
-            error!("Command type unknown: {}", cmd_config.cmd_type);
-            Err(format!("Command type unknown: {}", cmd_config.cmd_type).into())
-        }
+        // Stop command chaining
+        CommandType::StopChaining => Ok(false),
     }
 }
 
@@ -301,7 +300,7 @@ fn execute_lua_command(
     };
     
     // get timeout
-    let timeout = Duration::from_millis(cmd_config.timeout);
+    let timeout = Duration::from_millis(cmd_config.effective_timeout_ms());
     
     info!("Executing Lua command: {} (sandbox: {:?}, timeout: {:?})", 
           cmd_config.id, sandbox, timeout);
