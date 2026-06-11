@@ -39,13 +39,22 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Generate Routify routes
+      - name: Build frontend (pre-generate routify + production build)
         working-directory: frontend
-        run: npx vite build --mode development --emptyOutDir false || true
+        run: |
+          npx vite build --mode development --emptyOutDir false || true
+          npx vite build
 
-      - name: Build frontend (production)
-        working-directory: frontend
-        run: npx vite build
+      - name: Disable beforeBuildCommand in tauri.conf.json
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const p = 'crates/jarvis-gui/tauri.conf.json';
+          const cfg = JSON.parse(fs.readFileSync(p, 'utf8'));
+          cfg.build.beforeBuildCommand = '';
+          cfg.build.beforeDevCommand = '';
+          fs.writeFileSync(p, JSON.stringify(cfg, null, 2));
+          console.log('tauri.conf.json patched — build scripts disabled for CI');
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
