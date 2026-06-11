@@ -85,6 +85,11 @@ pub struct JCommand {
     #[serde(default)]
     pub phrases: HashMap<String, Vec<String>>,
 
+    // per-language sound file names to play on successful execution
+    // e.g. { "ru": ["ok.mp3"], "en": ["done.wav"] }
+    #[serde(default)]
+    pub sounds: HashMap<String, Vec<String>>,
+
     // slot definitions: slot_name -> SlotDefinition
     #[serde(default)]
     pub slots: HashMap<String, SlotDefinition>,
@@ -101,6 +106,15 @@ impl JCommand {
         self.phrases
             .get(lang)
             .map(|v| v.iter().map(|s| s.as_str()).collect())
+            .unwrap_or_default()
+    }
+
+    /// Sound files for this command in the given language.
+    /// Returns an owned Vec<String> so callers can pass it as &[String] to voices.
+    pub fn get_sounds(&self, lang: &str) -> Vec<String> {
+        self.sounds
+            .get(lang)
+            .cloned()
             .unwrap_or_default()
     }
 
