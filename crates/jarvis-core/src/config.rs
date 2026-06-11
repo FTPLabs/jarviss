@@ -34,7 +34,7 @@ pub fn init_dirs() -> Result<(), String> {
 
     // Настройка путей конфигурации и логов
     let mut config_dir = PathBuf::from(&APP_DIRS.get().unwrap().config_dir);
-    let mut log_dir = PathBuf::from(&APP_DIRS.get().unwrap().config_dir);
+    let mut log_dir = PathBuf::from(&APP_DIRS.get().unwrap().config_dir).join("logs");
 
     // Создание директорий при необходимости
     if !config_dir.exists() {
@@ -60,7 +60,7 @@ pub fn init_dirs() -> Result<(), String> {
 }
 
 /*
-   Настройки по умолчанию для FTPDev Voice Assistant.
+   Настройки по умолчанию для JARVIS.
 */
 pub const DEFAULT_AUDIO_TYPE: AudioType = AudioType::Kira;
 pub const DEFAULT_RECORDER_TYPE: RecorderType = RecorderType::PvRecorder;
@@ -77,13 +77,16 @@ pub const SOUND_PATH: &str = "resources/sound";
 pub const VOICES_PATH: &str = "voices";
 
 // Идентификаторы бренда FTPDev
-pub const BUNDLE_IDENTIFIER: &str = "com.ftpdev.assistant";
+pub const APP_NAME: &str = "JARVIS";
+  pub const APP_COPYRIGHT: &str = "© 2026 FTPDev";
+  pub const APP_TELEGRAM: &str = "@ftpdev_sup";
+  pub const BUNDLE_IDENTIFIER: &str = "com.ftpdev.jarvis";
 pub const DB_FILE_NAME: &str = "app.db";
 pub const LOG_FILE_NAME: &str = "log.txt";
 pub const APP_VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
 pub const AUTHOR_NAME: Option<&str> = Some("FTPDev");
 pub const REPOSITORY_LINK: Option<&str> = Some("https://github.com/FTPLabs/jarviss");
-pub const TG_OFFICIAL_LINK: Option<&str> = None;
+pub const TG_OFFICIAL_LINK: Option<&str> = Some("https://t.me/ftpdev_sup");
 pub const FEEDBACK_LINK: Option<&str> = None;
 pub const SUPPORT_BOOSTY_LINK: Option<&str> = None;
 pub const SUPPORT_PATREON_LINK: Option<&str> = None;
@@ -92,7 +95,7 @@ pub const SUPPORT_PATREON_LINK: Option<&str> = None;
    Трей-иконка.
 */
 pub const TRAY_ICON: &str = "32x32.png";
-pub const TRAY_TOOLTIP: &str = "FTPDev Voice Assistant";
+pub const TRAY_TOOLTIP: &str = "JARVIS";
 
 // RUSTPOTTER
 pub const RUSPOTTER_MIN_SCORE: f32 = 0.62;

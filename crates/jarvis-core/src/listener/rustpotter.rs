@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use once_cell::sync::OnceCell;
 use rustpotter::Rustpotter;
 
-use crate::config;
+use crate::{config, APP_DIR};
 
 // store rustpotter instance
 static RUSTPOTTER: OnceCell<Mutex<Rustpotter>> = OnceCell::new();
