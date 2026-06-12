@@ -3,6 +3,7 @@ use sysinfo::{System, Pid, ProcessRefreshKind, RefreshKind, CpuRefreshKind, Comp
   use std::sync::Mutex;
   use once_cell::sync::Lazy;
   use std::path::PathBuf;
+  use tauri::Manager; // FIX: required for AppHandle::path() in Tauri v2
 
   #[global_allocator]
   static PEAK_ALLOC: PeakAlloc = PeakAlloc;
