@@ -362,14 +362,8 @@ fn process_text_command(text: &str, rt: &tokio::runtime::Runtime) {
 
 // Execute command, returns true if chaining should continue
 fn execute_command(text: &str, rt: &tokio::runtime::Runtime) -> bool {
-    let commands_list = match COMMANDS_LIST.get() {
-        Some(c) => c,
-        None => {
-            ipc::send(IpcEvent::Error { message: "Commands not loaded".to_string() });
-            ipc::send(IpcEvent::Idle);
-            return false;
-        }
-    };
+    let commands_list_guard = COMMANDS_LIST.read();
+    let commands_list = &*commands_list_guard;
     
     let cmd_result = if let Some((intent_id, confidence)) = 
         rt.block_on(intent::classify(text)) 
