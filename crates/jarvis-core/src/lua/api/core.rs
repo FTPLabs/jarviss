@@ -1,10 +1,13 @@
-// Core Lua API: log, sleep, print, etc.
+// Core Lua API: log, sleep, print, speak, chain control
 
   use mlua::{Lua, Table, MultiValue, Value};
 
   pub fn register(lua: &Lua, jarvis: &Table) -> mlua::Result<()> {
 
-      // @ jarvis.log(level, message)
+      // jarvis._chain — internal flag controlling chaining after execution (default: true)
+      jarvis.set("_chain", true)?;
+
+      // jarvis.log(level, message)
       let log_fn = lua.create_function(|_, (level, message): (String, String)| {
           match level.to_lowercase().as_str() {
               "debug" => log::debug!("[Lua] {}", message),
@@ -17,9 +20,7 @@
       })?;
       jarvis.set("log", log_fn)?;
 
-      // @ jarvis.print(...)
-      // BUG FIX: old code used {:?} debug format (adds quotes around strings).
-      // Now maps each Value to its human-readable representation.
+      // jarvis.print(...) — human-readable output (no debug-format quotes)
       let print_fn = lua.create_function(|_, args: MultiValue| {
           let parts: Vec<String> = args.iter()
               .map(|v| match v {
@@ -40,20 +41,32 @@
       })?;
       jarvis.set("print", print_fn)?;
 
-      // @ jarvis.sleep(ms)
+      // jarvis.sleep(ms)
       let sleep_fn = lua.create_function(|_, ms: u64| {
           std::thread::sleep(std::time::Duration::from_millis(ms));
           Ok(())
       })?;
       jarvis.set("sleep", sleep_fn)?;
 
-      // @ jarvis.speak(text)
-      // @TODO: wire up to TTS when implemented
+      // jarvis.speak(text) — TTS via platform engine (PowerShell on Windows, espeak on Linux)
       let speak_fn = lua.create_function(|_, text: String| {
-          log::info!("[Lua] SPEAK (TTS stub): {}", text);
+          log::info!("[Lua] speak: {}", text);
+          jarvis_core::voices::speak_text(&text);
           Ok(())
       })?;
       jarvis.set("speak", speak_fn)?;
+
+      // jarvis.set_chain(bool) — control whether the assistant stays in listening mode
+      // after this command. Default: true (keep listening for next command).
+      // Call jarvis.set_chain(false) to return to wake-word mode after this command.
+      let set_chain_fn = lua.create_function(|lua, value: bool| {
+          let globals = lua.globals();
+          if let Ok(jarvis_tbl) = globals.get::<Table>("jarvis") {
+              jarvis_tbl.set("_chain", value)?;
+          }
+          Ok(())
+      })?;
+      jarvis.set("set_chain", set_chain_fn)?;
 
       Ok(())
   }
