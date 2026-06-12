@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use jarvis_core::{audio_buffer::AudioRingBuffer, audio_processing, commands, config, listener, recorder, stt, COMMANDS_LIST, intent, voices, ipc::{self, IpcEvent}, i18n, slots};
 use rand::seq::SliceRandom;
 
-use crate::should_stop;
+use crate::{should_stop, is_muted, should_reload_commands, clear_reload_flag};
 
 // VAD state machine
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -53,6 +53,25 @@ fn main_loop(text_cmd_rx: Receiver<String>, rt: &tokio::runtime::Runtime) -> Res
             voices::play_goodbye();
             // FIX: Stopping sent post-loop after recorder cleanup
             break;
+        }
+
+
+        // HOT-RELOAD: apply new commands from disk if GUI requested it
+        if should_reload_commands() {
+            match jarvis_core::commands::parse_commands() {
+                Ok(cmds) => {
+                    info!("Hot-reload: loaded {} command(s)", cmds.len());
+                    *jarvis_core::COMMANDS_LIST.write() = cmds;
+                }
+                Err(e) => warn!("Hot-reload failed: {}", e),
+            }
+            clear_reload_flag();
+        }
+
+        // MUTE: skip processing when muted
+        if is_muted() {
+            recorder::read_microphone(&mut frame_buffer);
+            continue 'wake_word;
         }
 
         if let Ok(text) = text_cmd_rx.try_recv() {

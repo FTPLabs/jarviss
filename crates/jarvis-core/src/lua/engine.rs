@@ -1,4 +1,4 @@
-use mlua::{Lua, Value, StdLib};
+use mlua::{Lua, Value, StdLib, Table}; // FIX: Table needed for _chain read
   use std::path::PathBuf;
   use std::time::Duration;
   use std::fs;
