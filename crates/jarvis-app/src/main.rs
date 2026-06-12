@@ -1,160 +1,190 @@
+use jarvis_core::slots;
 use std::sync::Arc;
-  use std::sync::atomic::{AtomicBool, Ordering};
-  use std::sync::mpsc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
 
-  use jarvis_core::{
-      audio, audio_processing, commands, config, db, listener, recorder, stt, intent,
-      ipc::{self, IpcAction},
-      i18n, voices, models, slots,
-      APP_CONFIG_DIR, APP_LOG_DIR, COMMANDS_LIST, DB,
-  };
+// include core
+use jarvis_core::{
+    audio, audio_processing, commands, config, db, listener, recorder, stt, intent,
+    ipc::{self, IpcAction},
+    i18n, voices, models,
+    APP_CONFIG_DIR, APP_LOG_DIR, COMMANDS_LIST, DB,
+};
 
-  #[macro_use]
-  extern crate simple_log;
-  mod log;
+// include log
+#[macro_use]
+extern crate simple_log;
+mod log;
 
-  mod app;
+// include app
+mod app;
 
-  #[cfg(not(target_os = "macos"))]
-  mod tray;
+// include tray
+// @TODO. macOS currently not supported for tray functionality.
+#[cfg(not(target_os = "macos"))]
+mod tray;
 
-  static SHOULD_STOP: AtomicBool = AtomicBool::new(false);
-  static SHOULD_RELOAD_COMMANDS: AtomicBool = AtomicBool::new(false);
-  static IS_MUTED: AtomicBool = AtomicBool::new(false);
+static SHOULD_STOP: AtomicBool = AtomicBool::new(false);
+static IS_MUTED:               AtomicBool = AtomicBool::new(false);
+static SHOULD_RELOAD_COMMANDS: AtomicBool = AtomicBool::new(false);
 
-  fn main() -> Result<(), String> {
-      config::init_dirs()?;
-      log::init_logging()?;
+fn main() -> Result<(), String> {
+    // initialize directories
+    config::init_dirs()?;
 
-      info!("Starting Jarvis v{} ...", config::APP_VERSION.unwrap_or("unknown"));
-      info!("Config directory is: {}", APP_CONFIG_DIR.get().unwrap().display());
-      info!("Log directory is: {}", APP_LOG_DIR.get().unwrap().display());
+    // initialize logging
+    log::init_logging()?;
 
-      let settings = db::init();
+    // log some base info
+    info!("Starting Jarvis v{} ...", config::APP_VERSION.unwrap());
+    info!("Config directory is: {}", APP_CONFIG_DIR.get().unwrap().display());
+    info!("Log directory is: {}", APP_LOG_DIR.get().unwrap().display());
 
-      DB.set(settings.arc().clone())
-          .expect("DB already initialized");
+    // initialize settings
+    let settings = db::init();
 
-      let voice_id = settings.lock().voice.clone();
-      let language = settings.lock().language.clone();
-      if let Err(e) = voices::init(&voice_id, &language) {
-          warn!("Failed to init voices: {}", e);
-      }
+    // set global DB (for core modules that read settings at init time)
+    DB.set(settings.arc().clone())
+            .expect("DB already initialized");
 
-      i18n::init(&settings.lock().language);
+    // init voices
+    let voice_id = settings.lock().voice.clone();
+    let language = settings.lock().language.clone();
+    if let Err(e) = voices::init(&voice_id, &language) {
+        warn!("Failed to init voices: {}", e);
+    }
 
-      if recorder::init().is_err() {
-          app::close(1);
-      }
+    // init i18n
+    i18n::init(&settings.lock().language);
 
-      if let Err(e) = models::init() {
-          warn!("Models registry init failed: {}", e);
-      }
+    // init recorder
+    if recorder::init().is_err() {
+        app::close(1);
+    }
 
-      if stt::init().is_err() {
-          app::close(1);
-      }
+    // init models registry (scans available AI models)
+    if let Err(e) = models::init() {
+        warn!("Models registry init failed: {}", e);
+    }
 
-      info!("Initializing commands.");
-      load_commands();
+    // init stt engine
+    if stt::init().is_err() {
+        // @TODO. Allow continuing even without STT, if commands is using keywords or smthng?
+        app::close(1); // cannot continue without stt
+    }
 
-      if audio::init().is_err() {
-          app::close(1);
-      }
+    // init commands
+    info!("Initializing commands.");
+    let cmds = match commands::parse_commands() {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to parse commands: {}. Starting with empty command list.", e);
+            Vec::new()
+        }
+    };
+    info!("Commands initialized. Count: {}, List: {:?}", cmds.len(), commands::list_paths(&cmds));
+    *COMMANDS_LIST.write() = cmds; // FIX: COMMANDS_LIST is now RwLock for hot-reload
 
-      if let Err(e) = listener::init() {
-          error!("Wake-word engine init failed: {}", e);
-          app::close(1);
-      }
+    // init audio
+    if audio::init().is_err() {
+        // @TODO. Allow continuing even without audio?
+        app::close(1); // cannot continue without audio
+    }
 
-      let rt = Arc::new(
-          tokio::runtime::Runtime::new().expect("Failed to create tokio runtime")
-      );
+    // init wake-word engine
+    if let Err(e) = listener::init() {
+        error!("Wake-word engine init failed: {}", e);
+        app::close(1);
+    }
 
-      rt.block_on(async {
-          let cmds = COMMANDS_LIST.read();
-          if let Err(e) = intent::init(&cmds).await {
-              error!("Failed to initialize intent classifier: {}", e);
-              app::close(1);
-          }
-      });
+    // shared async runtime for intent classification, IPC, etc.
+    let rt = Arc::new(
+        tokio::runtime::Runtime::new().expect("Failed to create tokio runtime")
+    );
 
-      slots::init().map_err(|e| error!("Slot extraction init failed: {}", e)).ok();
+    // init intent-recognition engine
+    {
+        let cmds_guard = COMMANDS_LIST.read();
+        rt.block_on(async {
+            if let Err(e) = intent::init(&*cmds_guard).await {
+                error!("Failed to initialize intent classifier: {}", e);
+                app::close(1);
+            }
+        });
+    } // FIX: drop RwLock read guard
 
-      info!("Initializing audio processing...");
-      if let Err(e) = audio_processing::init() {
-          warn!("Audio processing init failed: {}", e);
-      }
+    // init slots parsing engine
+    slots::init().map_err(|e| error!("Slot extraction init failed: {}", e)).ok();
 
-      info!("Initializing IPC...");
-      ipc::init();
+    // init audio processing
+    info!("Initializing audio processing...");
+    if let Err(e) = audio_processing::init() {
+        warn!("Audio processing init failed: {}", e);
+    }
 
-      let (text_cmd_tx, text_cmd_rx) = mpsc::channel::<String>();
+    // init IPC
+    info!("Initializing IPC...");
+    ipc::init();
 
-      ipc::set_action_handler(move |action| {
-          match action {
-              IpcAction::Stop => {
-                  info!("Received stop command from GUI");
-                  SHOULD_STOP.store(true, Ordering::SeqCst);
-              }
-              IpcAction::ReloadCommands => {
-                  info!("Received reload commands request — scheduling hot-reload");
-                  SHOULD_RELOAD_COMMANDS.store(true, Ordering::SeqCst);
-              }
-              IpcAction::SetMuted { muted } => {
-                  info!("Mute state changed: {}", muted);
-                  IS_MUTED.store(muted, Ordering::SeqCst);
-              }
-              IpcAction::TextCommand { text } => {
-                  info!("Received text command: {}", text);
-                  if let Err(e) = text_cmd_tx.send(text) {
-                      error!("Failed to send text command to app: {}", e);
-                  }
-              }
-              IpcAction::Ping => {
-                  // handled internally by IPC server
-              }
-          }
-      });
+    // channel for text commands (manually written in the GUI)
+    let (text_cmd_tx, text_cmd_rx) = mpsc::channel::<String>();
 
-      let ipc_rt = Arc::clone(&rt);
-      std::thread::spawn(move || {
-          ipc_rt.block_on(ipc::start_server());
-      });
+    ipc::set_action_handler(move |action| {
+        match action {
+            IpcAction::Stop => {
+                info!("Received stop command from GUI");
+                SHOULD_STOP.store(true, Ordering::SeqCst);
+            }
+            IpcAction::ReloadCommands => {
+                info!("Received reload commands request");
+                SHOULD_RELOAD_COMMANDS.store(true, Ordering::SeqCst); // FIX: implemented
+            }
+            IpcAction::SetMuted { muted } => {
+                info!("Received mute request: {}", muted);
+                IS_MUTED.store(muted, Ordering::SeqCst); // FIX: implemented
+            }
+            IpcAction::TextCommand { text } => {
+                info!("Received text command: {}", text);
+                if let Err(e) = text_cmd_tx.send(text) {
+                    error!("Failed to send text command to app: {}", e);
+                }
+            }
+            IpcAction::Ping => {
+                // handled internally by server
+            }
+            _ => {}
+        }
+    });
 
-      let app_rt = Arc::clone(&rt);
-      std::thread::spawn(move || {
-          let _ = app::start(text_cmd_rx, &app_rt);
-      });
+    // start WebSocket server on the shared runtime
+    let ipc_rt = Arc::clone(&rt);
+    std::thread::spawn(move || {
+        ipc_rt.block_on(ipc::start_server());
+    });
+    
+    // start the app (in the background thread)
+    let app_rt = Arc::clone(&rt);
+    std::thread::spawn(move || {
+        let _ = app::start(text_cmd_rx, &app_rt);
+    });
 
-      tray::init_blocking(settings);
+    tray::init_blocking(settings);
 
-      Ok(())
-  }
+    Ok(())
+}
 
-  /// Parse commands from disk and store in the global COMMANDS_LIST.
-  fn load_commands() {
-      match commands::parse_commands() {
-          Ok(cmds) => {
-              info!("Commands loaded. Count: {}, paths: {:?}", cmds.len(), commands::list_paths(&cmds));
-              let mut list = COMMANDS_LIST.write();
-              *list = cmds;
-          }
-          Err(e) => {
-              warn!("Failed to parse commands: {}. Starting with empty command list.", e);
-          }
-      }
-  }
+pub fn should_stop() -> bool {
+    SHOULD_STOP.load(Ordering::SeqCst)
+}
 
-  pub fn should_stop() -> bool {
-      SHOULD_STOP.load(Ordering::SeqCst)
-  }
+pub fn is_muted() -> bool {
+    IS_MUTED.load(Ordering::SeqCst)
+}
 
-  pub fn should_reload_commands() -> bool {
-      SHOULD_RELOAD_COMMANDS.swap(false, Ordering::SeqCst)
-  }
+pub fn should_reload_commands() -> bool {
+    SHOULD_RELOAD_COMMANDS.load(Ordering::SeqCst)
+}
 
-  pub fn is_muted() -> bool {
-      IS_MUTED.load(Ordering::SeqCst)
-  }
-  
+pub fn clear_reload_flag() {
+    SHOULD_RELOAD_COMMANDS.store(false, Ordering::SeqCst);
+}
