@@ -224,7 +224,8 @@ pub fn execute_command(cmd_path: &PathBuf, cmd_config: &JCommand, phrase: Option
                 exe_path_local.as_path()
             };
 
-            execute_exe(exe_path.to_str().unwrap(), &cmd_config.exe_args)
+            // FIX: to_string_lossy() instead of unwrap() — safe for non-UTF8 paths (e.g. Cyrillic dirs)
+              execute_exe(&exe_path.to_string_lossy(), &cmd_config.exe_args)
                 .map(|_| true)
                 .map_err(|e| format!("AHK process spawn error: {}", e))
         }
@@ -296,7 +297,7 @@ fn execute_lua_command(
         command_id: cmd_config.id.clone(),
         command_path: cmd_path.clone(),
         language: i18n::get_language(),
-        slots: slots.map(|s| s.clone()),
+        slots: slots.cloned(),
     };
     
     // get timeout

@@ -4,7 +4,7 @@
 
   pub fn register(lua: &Lua, jarvis: &Table) -> mlua::Result<()> {
 
-      // jarvis._chain — internal flag controlling chaining after execution (default: true)
+      // jarvis._chain — controls chaining after execution (default: true = stay listening)
       jarvis.set("_chain", true)?;
 
       // jarvis.log(level, message)
@@ -20,7 +20,7 @@
       })?;
       jarvis.set("log", log_fn)?;
 
-      // jarvis.print(...) — human-readable output (no debug-format quotes)
+      // jarvis.print(...) — human-readable multi-value output (no debug-format quotes)
       let print_fn = lua.create_function(|_, args: MultiValue| {
           let parts: Vec<String> = args.iter()
               .map(|v| match v {
@@ -48,17 +48,16 @@
       })?;
       jarvis.set("sleep", sleep_fn)?;
 
-      // jarvis.speak(text) — TTS via platform engine (PowerShell on Windows, espeak on Linux)
+      // jarvis.speak(text) — platform TTS: PowerShell on Windows, espeak on Linux, say on macOS
       let speak_fn = lua.create_function(|_, text: String| {
           log::info!("[Lua] speak: {}", text);
-          jarvis_core::voices::speak_text(&text);
+          crate::voices::speak_text(&text);
           Ok(())
       })?;
       jarvis.set("speak", speak_fn)?;
 
-      // jarvis.set_chain(bool) — control whether the assistant stays in listening mode
-      // after this command. Default: true (keep listening for next command).
-      // Call jarvis.set_chain(false) to return to wake-word mode after this command.
+      // jarvis.set_chain(bool) — set whether to stay in command-listening mode after this script.
+      // Default: true (keep listening). Call jarvis.set_chain(false) to return to wake-word mode.
       let set_chain_fn = lua.create_function(|lua, value: bool| {
           let globals = lua.globals();
           if let Ok(jarvis_tbl) = globals.get::<Table>("jarvis") {
