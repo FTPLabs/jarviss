@@ -279,7 +279,7 @@ pub fn play_goodbye() { play(structs::Reaction::Goodbye); }
       let text = text.to_string();
       #[cfg(target_os = "windows")]
       std::thread::spawn(move || {
-          let safe = text.replace(''', "''");
+          let safe = text.replace('\'', "''");
           let script = format!(
               "Add-Type -AssemblyName System.Speech;                $s = New-Object System.Speech.Synthesis.SpeechSynthesizer;                $s.Speak('{}');",
               safe
